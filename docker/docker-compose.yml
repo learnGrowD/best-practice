@@ -1,0 +1,97 @@
+version: "3"
+
+services:
+  configserver:
+    build:
+      context: ../configserver
+      dockerfile: Dockerfile
+    image: devwilld/best-prc-config-server:0.0.1
+    ports:
+      - "8071:8071"
+    networks:
+      backend:
+        aliases:
+          - "configserver"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8071/actuator/health" ]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+  eurekaserver:
+    build:
+      context: ../eurekaserver
+      dockerfile: Dockerfile
+    image: devwilld/best_prc_eureka-server:0.0.1
+    ports:
+      - "8070:8070"
+    depends_on:
+      configserver:
+        condition: service_healthy
+    networks:
+      backend:
+        aliases:
+          - "eurekaserver"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/actuator/health"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+  gatewayserver:
+    build:
+      context: ../gatewayserver
+      dockerfile: Dockerfile
+    image: devwilld/best_prc_gateway_server:0.0.1
+    ports:
+      - "8072:8072"
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+    networks:
+      backend:
+        aliases:
+          - "gatewayserver"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8072/actuator/health"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+  notificationserver:
+    build:
+      context: ../notificationserver
+      dockerfile: Dockerfile
+    image: devwilld/best-prc-notification-server:0.0.1
+    ports:
+      - "8081:8081"
+    depends_on:
+      gatewayserver:
+        condition: service_healthy
+    networks:
+      - backend
+  paymentserver:
+    build:
+      context: ../paymentserver
+      dockerfile: Dockerfile
+    image: devwilld/best-prc-payment-server:0.0.1
+    ports:
+      - "8082:8082"
+    depends_on:
+      gatewayserver:
+        condition: service_healthy
+    networks:
+      - backend
+  reservationserver:
+    build:
+      context: ../reservationserver
+      dockerfile: Dockerfile
+    image: devwilld/best-prc-reservation-server:0.0.1
+    ports:
+      - "8083:8083"
+    depends_on:
+      gatewayserver:
+        condition: service_healthy
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
